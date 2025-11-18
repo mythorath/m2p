@@ -1,0 +1,43 @@
+[Unit]
+Description=Pool Monitoring Service for Mine-to-Play Game
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=m2p
+Group=m2p
+WorkingDirectory=/opt/m2p
+Environment="PATH=/opt/m2p/venv/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+# Load environment variables from .env file
+EnvironmentFile=/opt/m2p/.env
+
+# Run the pool poller
+ExecStart=/opt/m2p/venv/bin/python -m server.pool_poller
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/m2p/logs
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pool-poller
+
+# Resource limits (optional)
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

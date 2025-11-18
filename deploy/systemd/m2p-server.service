@@ -1,0 +1,39 @@
+[Unit]
+Description=M2P Game Server
+Documentation=https://github.com/yourusername/m2p
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=m2p
+Group=m2p
+WorkingDirectory=/home/m2p/m2p/server
+Environment="NODE_ENV=production"
+Environment="PORT=5000"
+EnvironmentFile=/home/m2p/m2p/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=m2p-server
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/m2p/m2p
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=1G
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,299 @@
+/* Loading States CSS */
+
+/* Spinner */
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-circle {
+  border-style: solid;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton */
+.skeleton-container {
+  width: 100%;
+}
+
+.skeleton {
+  position: relative;
+  background: #2d2d44;
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-card {
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dots Loader */
+.dots-loader {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dots-loader .dot {
+  border-radius: 50%;
+  animation: dots-bounce 1.4s infinite ease-in-out both;
+}
+
+.dots-loader .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dots-loader .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes dots-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Pulse Loader */
+.pulse-loader {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Progress Circle */
+.progress-circle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-circle-fg {
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.progress-circle-text {
+  position: absolute;
+  font-weight: bold;
+  font-size: 1.25rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* Loading Overlay */
+.loading-overlay-container {
+  position: relative;
+  min-height: 200px;
+}
+
+.loading-overlay-content.blurred {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.loading-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading-overlay-message {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Mining Loader (themed) */
+.mining-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+}
+
+.mining-loader-pickaxe {
+  font-size: 3rem;
+  animation: mining-swing 0.8s ease-in-out infinite;
+}
+
+@keyframes mining-swing {
+  0%, 100% {
+    transform: rotate(-20deg);
+  }
+  50% {
+    transform: rotate(20deg);
+  }
+}
+
+.mining-loader-text {
+  color: #FFD700;
+  font-size: 1.25rem;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.mining-loader-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.mining-loader-dots span {
+  color: #FFD700;
+  font-size: 1.5rem;
+  animation: dots-fade 1.4s infinite;
+}
+
+.mining-loader-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.mining-loader-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.mining-loader-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dots-fade {
+  0%, 60%, 100% {
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .loading-overlay-message {
+    font-size: 0.875rem;
+  }
+
+  .mining-loader-pickaxe {
+    font-size: 2rem;
+  }
+
+  .mining-loader-text {
+    font-size: 1rem;
+  }
+
+  .progress-circle-text {
+    font-size: 1rem;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .spinner-circle,
+  .skeleton-shimmer,
+  .dots-loader .dot,
+  .pulse-ring,
+  .mining-loader-pickaxe,
+  .mining-loader-dots span {
+    animation: none;
+  }
+
+  .progress-circle-fg {
+    transition: none;
+  }
+}
+
+/* High contrast */
+@media (prefers-contrast: high) {
+  .skeleton {
+    border: 1px solid #ffffff;
+  }
+
+  .loading-overlay {
+    background: rgba(0, 0, 0, 0.9);
+  }
+}

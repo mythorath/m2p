@@ -1,0 +1,78 @@
+.ap-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.ap-counter-label {
+  font-size: 0.875rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.ap-counter-value {
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  transition: all 0.3s ease;
+  line-height: 1;
+}
+
+.ap-counter-value.glowing {
+  animation: glow-pulse 0.5s ease-out;
+  transform: scale(1.1);
+}
+
+@keyframes glow-pulse {
+  0% {
+    text-shadow:
+      0 0 10px var(--glow-color, #FFD700),
+      0 0 20px var(--glow-color, #FFD700),
+      0 0 30px var(--glow-color, #FFD700);
+    transform: scale(1);
+  }
+  50% {
+    text-shadow:
+      0 0 20px var(--glow-color, #FFD700),
+      0 0 30px var(--glow-color, #FFD700),
+      0 0 40px var(--glow-color, #FFD700),
+      0 0 50px var(--glow-color, #FFD700);
+    transform: scale(1.15);
+  }
+  100% {
+    text-shadow:
+      0 0 10px var(--glow-color, #FFD700),
+      0 0 20px var(--glow-color, #FFD700);
+    transform: scale(1.1);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .ap-counter-value {
+    font-size: 1.5rem !important;
+  }
+
+  .ap-counter-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .ap-counter-value.glowing {
+    animation: none;
+    transform: none;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      text-shadow: 0 0 10px var(--glow-color, #FFD700);
+      transform: none;
+    }
+  }
+}

@@ -1,0 +1,191 @@
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.register-box {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.register-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.verification-section {
+  margin-bottom: 20px;
+}
+
+.verification-info {
+  margin-bottom: 25px;
+  padding: 20px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 10px;
+}
+
+.verification-info h3 {
+  color: #667eea;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.verification-info p {
+  color: #c0c0c0;
+  margin: 0;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.challenge-details {
+  margin-bottom: 25px;
+}
+
+.challenge-item {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.challenge-item label {
+  display: block;
+  color: #a0a0a0;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.challenge-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.challenge-value .amount {
+  color: #4ade80;
+  font-size: 1.3rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.challenge-value .address {
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  font-family: monospace;
+  flex: 1;
+  word-break: break-all;
+}
+
+.challenge-value .time {
+  color: #fbbf24;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.btn-copy {
+  padding: 8px 16px;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 6px;
+  color: #667eea;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.verify-form {
+  margin-top: 20px;
+}
+
+.verify-form small {
+  display: block;
+  color: #a0a0a0;
+  font-size: 0.8rem;
+  margin-top: 5px;
+}
+
+.verify-note {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+}
+
+.verify-note p {
+  color: #fbbf24;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.verify-note strong {
+  color: #fcd34d;
+}
+
+.register-footer {
+  text-align: center;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+}
+
+.register-footer p {
+  color: #a0a0a0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .register-box {
+    padding: 30px 20px;
+  }
+
+  .register-header h1 {
+    font-size: 2rem;
+  }
+
+  .challenge-value {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .challenge-value .address {
+    font-size: 0.75rem;
+  }
+
+  .btn-copy {
+    align-self: flex-start;
+  }
+}

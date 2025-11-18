@@ -1,0 +1,151 @@
+/* Mining Scene Styles */
+.mining-scene {
+  position: relative;
+  background: linear-gradient(to bottom, #0a0a0a 0%, #1a1a2e 50%, #2d2d44 100%);
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mining-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.miner-container {
+  position: absolute;
+  z-index: 10;
+  transform: translateX(-50%);
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Mining Rate Display */
+.mining-rate-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid #FFD700;
+  z-index: 20;
+}
+
+.rate-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.rate-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #FFD700;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* Pending Rewards Indicator */
+.pending-rewards {
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid #00FF00;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.pending-icon {
+  font-size: 1.5rem;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.pending-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #00FF00;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mining-scene {
+    width: 100% !important;
+    height: 400px !important;
+  }
+
+  .mining-rate-display,
+  .pending-rewards {
+    font-size: 0.875rem;
+    padding: 8px 12px;
+  }
+
+  .rate-value {
+    font-size: 1rem;
+  }
+
+  .miner-container {
+    transform: scale(0.8) translateX(-50%);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .pending-icon {
+    animation: none;
+  }
+
+  .pending-rewards {
+    animation: none;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: light) {
+  .mining-scene {
+    background: linear-gradient(to bottom, #e0e0e0 0%, #c0c0c0 50%, #a0a0a0 100%);
+  }
+
+  .mining-rate-display,
+  .pending-rewards {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+  }
+
+  .rate-label {
+    color: #666;
+  }
+}

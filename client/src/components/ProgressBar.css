@@ -1,0 +1,150 @@
+/* Progress Bar Styles */
+.progress-bar-container {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+}
+
+.progress-bar-label {
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+}
+
+.progress-bar-percentage {
+  color: #888;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+
+.progress-bar-track {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-bar-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+  overflow: hidden;
+}
+
+/* Shine effect on progress bar */
+.progress-bar-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shine 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Value display */
+.progress-bar-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 0.875rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Variant-specific animations */
+.progress-bar-fill.achievement {
+  animation: pulse-achievement 2s ease-in-out infinite;
+}
+
+.progress-bar-fill.mining {
+  animation: pulse-mining 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-achievement {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes pulse-mining {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.15);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .progress-bar-header {
+    font-size: 0.75rem;
+  }
+
+  .progress-bar-label,
+  .progress-bar-percentage,
+  .progress-bar-value {
+    font-size: 0.75rem;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar-shine {
+    animation: none;
+  }
+
+  .progress-bar-fill.achievement,
+  .progress-bar-fill.mining {
+    animation: none;
+  }
+
+  .progress-bar-fill {
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .progress-bar-track {
+    border: 2px solid #ffffff;
+  }
+
+  .progress-bar-fill {
+    border: 1px solid #000000;
+  }
+}

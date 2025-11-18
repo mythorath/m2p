@@ -1,0 +1,27 @@
+# Dockerfile for running tests in isolated environment
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements-test.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-test.txt
+
+# Copy application code
+COPY server/ ./server/
+COPY pytest.ini .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV TESTING=True
+
+# Run tests by default
+CMD ["pytest", "server/tests", "-v", "--cov=server", "--cov-report=term-missing"]

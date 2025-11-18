@@ -7,6 +7,7 @@ import GameView from './components/GameView';
 import Leaderboard from './components/Leaderboard';
 import Achievements from './components/Achievements';
 import Stats from './components/Stats';
+import DungeonView from './components/DungeonView';
 import './App.css';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
 
             {/* Protected Routes */}
             <Route path="/game" element={<GameView />} />
+            <Route path="/dungeons" element={<DungeonView />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/stats" element={<Stats />} />

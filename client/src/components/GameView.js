@@ -119,6 +119,7 @@ const GameView = () => {
 
         <div className="header-right">
           <nav className="nav-menu">
+            <Link to="/dungeons" className="nav-link">🏰 Dungeons</Link>
             <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link to="/achievements" className="nav-link">Achievements</Link>
             <button onClick={handleLogout} className="btn-logout">Logout</button>

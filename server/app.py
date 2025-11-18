@@ -30,8 +30,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from models import (
     db, Player, MiningEvent, Achievement, PlayerAchievement,
-    Purchase, generate_challenge_amount
+    Purchase, generate_challenge_amount, Dungeon, DungeonRun,
+    PlayerCharacter, Gear, PlayerInventory, Monster
 )
+from dungeon_service import DungeonService
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +75,9 @@ limiter = Limiter(
 with app.app_context():
     db.create_all()
     logger.info("Database tables created successfully")
+
+# Initialize dungeon service
+dungeon_service = DungeonService(app=app, socketio=socketio)
 
 
 # ===========================
@@ -777,6 +782,739 @@ def get_global_stats():
 
     except SQLAlchemyError as e:
         logger.error(f"Database error in get_global_stats: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+# ===========================
+# DUNGEON SYSTEM ENDPOINTS
+# ===========================
+
+# --- Dungeon Management ---
+
+@app.route('/api/dungeons', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_dungeons():
+    """
+    Get list of all available dungeons.
+
+    Query params:
+        wallet (optional): Player wallet to check unlock status
+
+    Returns:
+        200: List of dungeons with unlock status
+    """
+    try:
+        wallet = request.args.get('wallet')
+        dungeons = Dungeon.query.filter_by(active=True).all()
+
+        results = []
+        for dungeon in dungeons:
+            dungeon_data = dungeon.to_dict(include_stats=True)
+
+            # Check if player meets requirements
+            if wallet and validate_wallet_address(wallet):
+                player = Player.query.filter_by(wallet_address=wallet).first()
+                character = PlayerCharacter.query.filter_by(player_id=wallet).first()
+
+                if character:
+                    dungeon_data['can_enter'] = character.level >= dungeon.min_level_required
+                    dungeon_data['player_level'] = character.level
+                else:
+                    dungeon_data['can_enter'] = False
+                    dungeon_data['player_level'] = 0
+
+                if player:
+                    dungeon_data['can_afford'] = player.available_ap >= dungeon.ap_cost_per_run
+                else:
+                    dungeon_data['can_afford'] = False
+
+            results.append(dungeon_data)
+
+        return jsonify(results), 200
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_dungeons: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeons/<int:dungeon_id>', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_dungeon_details(dungeon_id):
+    """Get detailed information about a specific dungeon."""
+    try:
+        dungeon = Dungeon.query.get(dungeon_id)
+        if not dungeon:
+            return jsonify({'error': 'Dungeon not found'}), 404
+
+        dungeon_data = dungeon.to_dict(include_stats=True)
+
+        # Get monsters for this dungeon
+        monsters = Monster.query.filter_by(dungeon_id=dungeon_id).all()
+        dungeon_data['monsters'] = [m.to_dict() for m in monsters]
+
+        return jsonify(dungeon_data), 200
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_dungeon_details: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/start', methods=['POST'])
+@limiter.limit("20 per hour")
+def start_dungeon_run():
+    """
+    Start a new dungeon run.
+
+    Request body:
+        {
+            "wallet": "A...",
+            "dungeon_id": 1
+        }
+
+    Returns:
+        200: Dungeon run started successfully
+        400: Invalid request or requirements not met
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        dungeon_id = data.get('dungeon_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        if not dungeon_id:
+            return jsonify({'error': 'Dungeon ID required'}), 400
+
+        # Get player, character, and dungeon
+        player = Player.query.filter_by(wallet_address=wallet).first()
+        if not player:
+            return jsonify({'error': 'Player not found'}), 404
+
+        character = PlayerCharacter.query.filter_by(player_id=wallet).first()
+        if not character:
+            # Create character if doesn't exist
+            character = dungeon_service.create_character(wallet)
+
+        dungeon = Dungeon.query.get(dungeon_id)
+        if not dungeon or not dungeon.active:
+            return jsonify({'error': 'Dungeon not available'}), 404
+
+        # Check requirements
+        if character.level < dungeon.min_level_required:
+            return jsonify({
+                'error': f'Requires level {dungeon.min_level_required}',
+                'player_level': character.level
+            }), 400
+
+        if player.available_ap < dungeon.ap_cost_per_run:
+            return jsonify({
+                'error': 'Insufficient AP',
+                'required': dungeon.ap_cost_per_run,
+                'available': player.available_ap
+            }), 400
+
+        # Check for active runs
+        active_run = DungeonRun.query.filter_by(
+            player_id=wallet,
+            status='active'
+        ).first()
+
+        if active_run:
+            return jsonify({
+                'error': 'Already have an active dungeon run',
+                'active_run': active_run.to_dict()
+            }), 400
+
+        # Spend AP
+        player.spent_ap += dungeon.ap_cost_per_run
+
+        # Create dungeon run
+        run = DungeonRun(
+            player_id=wallet,
+            dungeon_id=dungeon_id,
+            current_floor=1,
+            furthest_floor_reached=1,
+            status='active',
+            ap_spent=dungeon.ap_cost_per_run,
+            player_health=character.health,
+        )
+        db.session.add(run)
+        db.session.commit()
+
+        # Emit WebSocket event
+        if socketio:
+            socketio.emit('dungeon_started', {
+                'run_id': run.id,
+                'dungeon_name': dungeon.name,
+                'player': player.display_name,
+            }, room=wallet)
+
+        logger.info(f"Player {wallet} started dungeon run in {dungeon.name}")
+
+        return jsonify({
+            'success': True,
+            'run': run.to_dict(),
+            'character': character.to_dict(),
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in start_dungeon_run: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/current', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_current_dungeon_run():
+    """
+    Get player's current active dungeon run.
+
+    Query params:
+        wallet: Player wallet address
+
+    Returns:
+        200: Current run data or null
+    """
+    try:
+        wallet = request.args.get('wallet')
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.filter_by(
+            player_id=wallet,
+            status='active'
+        ).first()
+
+        if not run:
+            return jsonify({'run': None}), 200
+
+        return jsonify({'run': run.to_dict()}), 200
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_current_dungeon_run: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/abandon', methods=['POST'])
+@limiter.limit("20 per hour")
+def abandon_dungeon_run():
+    """
+    Abandon current dungeon run (lose unclaimed loot).
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Run abandoned successfully
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet:
+            return jsonify({'error': 'Run not found'}), 404
+
+        if run.status != 'active':
+            return jsonify({'error': 'Run is not active'}), 400
+
+        result = dungeon_service.abandon_dungeon_run(run)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in abandon_dungeon_run: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+# --- Combat & Exploration ---
+
+@app.route('/api/dungeon/explore', methods=['POST'])
+@limiter.limit("100 per hour")
+def explore_dungeon():
+    """
+    Explore current floor (advance room or floor).
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Encounter generated (monster/treasure/rest)
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet or run.status != 'active':
+            return jsonify({'error': 'Invalid run'}), 404
+
+        # Check if in combat
+        if run.combat_state:
+            return jsonify({'error': 'Already in combat'}), 400
+
+        # Generate encounter
+        encounter = dungeon_service.generate_room_encounter(
+            run.dungeon,
+            run.current_floor
+        )
+
+        run.current_room += 1
+
+        if encounter['type'] == 'monster':
+            # Start combat
+            monster = Monster.query.get(encounter['monster_id'])
+            dungeon_service.start_combat(run, monster)
+
+        elif encounter['type'] == 'rest':
+            # Heal player
+            character = run.player.character
+            heal_amount = int(character.max_health * encounter['heal_percent'])
+            character.heal(heal_amount)
+            run.player_health = character.health
+            encounter['healed'] = heal_amount
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'encounter': encounter,
+            'run': run.to_dict(),
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in explore_dungeon: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/combat/attack', methods=['POST'])
+@limiter.limit("100 per hour")
+def combat_attack():
+    """
+    Execute combat attack action.
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123,
+            "action": "attack" | "defend"
+        }
+
+    Returns:
+        200: Combat turn result
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+        action = data.get('action', 'attack')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet or run.status != 'active':
+            return jsonify({'error': 'Invalid run'}), 404
+
+        if not run.combat_state:
+            return jsonify({'error': 'Not in combat'}), 400
+
+        # Execute combat turn
+        result = dungeon_service.execute_combat_turn(run, action)
+
+        # Emit WebSocket events
+        if socketio and result.get('success'):
+            socketio.emit('combat_hit', {
+                'run_id': run.id,
+                'player_damage': result.get('player_damage_dealt', 0),
+                'monster_damage': result.get('monster_damage_dealt', 0),
+            }, room=wallet)
+
+            if result.get('victory'):
+                socketio.emit('monster_defeated', {
+                    'run_id': run.id,
+                    'rewards': result.get('rewards'),
+                }, room=wallet)
+
+            if result.get('player_defeated'):
+                socketio.emit('player_defeated', {
+                    'run_id': run.id,
+                    'exp_kept': run.total_exp_gained,
+                }, room=wallet)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in combat_attack: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/combat/flee', methods=['POST'])
+@limiter.limit("100 per hour")
+def combat_flee():
+    """
+    Attempt to flee from combat (60% success rate).
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Flee attempt result
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet or run.status != 'active':
+            return jsonify({'error': 'Invalid run'}), 404
+
+        if not run.combat_state:
+            return jsonify({'error': 'Not in combat'}), 400
+
+        result = dungeon_service.execute_combat_turn(run, 'flee')
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in combat_flee: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/advance-floor', methods=['POST'])
+@limiter.limit("50 per hour")
+def advance_floor():
+    """
+    Advance to next floor in dungeon.
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Advanced to next floor
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet or run.status != 'active':
+            return jsonify({'error': 'Invalid run'}), 404
+
+        if run.combat_state:
+            return jsonify({'error': 'Cannot advance while in combat'}), 400
+
+        result = dungeon_service.advance_floor(run)
+
+        if result['success'] and socketio:
+            socketio.emit('floor_cleared', {
+                'run_id': run.id,
+                'floor': run.current_floor,
+            }, room=wallet)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in advance_floor: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+# --- Character & Inventory ---
+
+@app.route('/api/character', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_character():
+    """
+    Get player's RPG character stats.
+
+    Query params:
+        wallet: Player wallet address
+
+    Returns:
+        200: Character data
+    """
+    try:
+        wallet = request.args.get('wallet')
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        character = PlayerCharacter.query.filter_by(player_id=wallet).first()
+
+        if not character:
+            # Create character if doesn't exist
+            character = dungeon_service.create_character(wallet)
+
+        return jsonify(character.to_dict()), 200
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_character: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/inventory', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_inventory():
+    """
+    Get player's gear inventory.
+
+    Query params:
+        wallet: Player wallet address
+
+    Returns:
+        200: List of inventory items
+    """
+    try:
+        wallet = request.args.get('wallet')
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        inventory = PlayerInventory.query.filter_by(player_id=wallet).all()
+
+        results = [item.to_dict() for item in inventory]
+
+        return jsonify(results), 200
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_inventory: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/inventory/equip/<int:inventory_id>', methods=['POST'])
+@limiter.limit("50 per hour")
+def equip_gear(inventory_id):
+    """
+    Equip gear from inventory.
+
+    Request body:
+        {
+            "wallet": "A..."
+        }
+
+    Returns:
+        200: Gear equipped successfully
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        character = PlayerCharacter.query.filter_by(player_id=wallet).first()
+        if not character:
+            return jsonify({'error': 'Character not found'}), 404
+
+        inventory_item = PlayerInventory.query.get(inventory_id)
+        if not inventory_item or inventory_item.player_id != wallet:
+            return jsonify({'error': 'Item not found'}), 404
+
+        result = dungeon_service.equip_gear(character, inventory_item)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in equip_gear: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/inventory/sell/<int:inventory_id>', methods=['POST'])
+@limiter.limit("50 per hour")
+def sell_gear(inventory_id):
+    """
+    Sell gear for AP.
+
+    Request body:
+        {
+            "wallet": "A..."
+        }
+
+    Returns:
+        200: Gear sold successfully
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        player = Player.query.filter_by(wallet_address=wallet).first()
+        if not player:
+            return jsonify({'error': 'Player not found'}), 404
+
+        inventory_item = PlayerInventory.query.get(inventory_id)
+        if not inventory_item or inventory_item.player_id != wallet:
+            return jsonify({'error': 'Item not found'}), 404
+
+        result = dungeon_service.sell_gear(player, inventory_item)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in sell_gear: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+# --- Loot & Rewards ---
+
+@app.route('/api/dungeon/loot/claim', methods=['POST'])
+@limiter.limit("50 per hour")
+def claim_loot():
+    """
+    Claim all unclaimed loot from dungeon run.
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Loot claimed successfully
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet:
+            return jsonify({'error': 'Run not found'}), 404
+
+        claimed_gear = dungeon_service.claim_loot(run, wallet)
+
+        # Emit rare loot notifications
+        if socketio:
+            for gear in claimed_gear:
+                if gear.rarity in ['epic', 'legendary']:
+                    socketio.emit('loot_dropped', {
+                        'player': run.player.display_name,
+                        'gear_name': gear.name,
+                        'rarity': gear.rarity,
+                    }, room=wallet)
+
+        return jsonify({
+            'success': True,
+            'claimed_count': len(claimed_gear),
+            'gear': [g.to_dict() for g in claimed_gear],
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in claim_loot: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/complete', methods=['POST'])
+@limiter.limit("50 per hour")
+def complete_dungeon():
+    """
+    Complete dungeon run and claim rewards.
+
+    Request body:
+        {
+            "wallet": "A...",
+            "run_id": 123
+        }
+
+    Returns:
+        200: Dungeon completed successfully
+    """
+    try:
+        data = request.get_json()
+        wallet = data.get('wallet')
+        run_id = data.get('run_id')
+
+        if not validate_wallet_address(wallet):
+            return jsonify({'error': 'Invalid wallet address'}), 400
+
+        run = DungeonRun.query.get(run_id)
+        if not run or run.player_id != wallet or run.status != 'active':
+            return jsonify({'error': 'Invalid run'}), 404
+
+        if run.combat_state:
+            return jsonify({'error': 'Cannot complete while in combat'}), 400
+
+        result = dungeon_service.complete_dungeon_run(run)
+
+        if socketio:
+            socketio.emit('dungeon_completed', {
+                'run_id': run.id,
+                'dungeon_name': run.dungeon.name,
+                'floors_cleared': run.furthest_floor_reached,
+                'player': run.player.display_name,
+            }, room=wallet)
+
+        return jsonify(result), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        logger.error(f"Database error in complete_dungeon: {e}")
+        return jsonify({'error': 'Database error occurred'}), 500
+
+
+@app.route('/api/dungeon/leaderboard/<int:dungeon_id>', methods=['GET'])
+@limiter.limit("100 per hour")
+def get_dungeon_leaderboard(dungeon_id):
+    """
+    Get leaderboard for specific dungeon.
+
+    Query params:
+        limit: Number of results (default 10, max 100)
+
+    Returns:
+        200: Leaderboard data
+    """
+    try:
+        limit = min(int(request.args.get('limit', 10)), 100)
+
+        leaderboard = dungeon_service.get_dungeon_leaderboard(dungeon_id, limit)
+
+        return jsonify(leaderboard), 200
+
+    except ValueError:
+        return jsonify({'error': 'Invalid limit parameter'}), 400
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in get_dungeon_leaderboard: {e}")
         return jsonify({'error': 'Database error occurred'}), 500
 
 

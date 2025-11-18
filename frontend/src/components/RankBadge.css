@@ -1,0 +1,73 @@
+.rank-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #1a1f35 0%, #0f1320 100%);
+  border: 2px solid #2a3f5f;
+  border-radius: 12px;
+  min-width: 200px;
+  transition: all 0.3s;
+}
+
+.rank-badge:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.rank-badge.top-1 {
+  border-color: #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+  box-shadow: 0 4px 24px rgba(251, 191, 36, 0.2);
+}
+
+.rank-badge.top-2 {
+  border-color: #9ca3af;
+  background: linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(107, 114, 128, 0.1) 100%);
+  box-shadow: 0 4px 24px rgba(156, 163, 175, 0.2);
+}
+
+.rank-badge.top-3 {
+  border-color: #cd7f32;
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.1) 0%, rgba(180, 100, 30, 0.1) 100%);
+  box-shadow: 0 4px 24px rgba(205, 127, 50, 0.2);
+}
+
+.rank-label {
+  font-size: 0.75rem;
+  color: #8b95a5;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.rank-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.rank-change {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.rank-change.up {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.rank-change.down {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.rank-badge.loading,
+.rank-badge.unranked {
+  color: #8b95a5;
+  font-size: 1rem;
+}

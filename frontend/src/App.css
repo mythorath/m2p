@@ -1,0 +1,119 @@
+.app {
+  min-height: 100vh;
+  background: #0a0e1a;
+  color: #ffffff;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #1a1f35 0%, #0f1320 100%);
+  border-bottom: 2px solid #2a3f5f;
+  padding: 1.5rem 2rem;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.wallet-input-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.wallet-input {
+  padding: 0.75rem 1rem;
+  background: #1a1f35;
+  border: 1px solid #2a3f5f;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  min-width: 300px;
+  transition: border-color 0.2s;
+}
+
+.wallet-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.toggle-widgets-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-widgets-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.app-content {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.widgets-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 300px;
+  max-width: 350px;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .app-content {
+    flex-direction: column;
+  }
+
+  .widgets-sidebar {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wallet-input-container {
+    flex-direction: column;
+  }
+
+  .wallet-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .app-content {
+    padding: 1rem;
+  }
+}

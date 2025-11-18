@@ -1,0 +1,38 @@
+[Unit]
+Description=M2P Background Worker
+Documentation=https://github.com/yourusername/m2p
+After=network.target postgresql.service redis.service m2p-server.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=m2p
+Group=m2p
+WorkingDirectory=/home/m2p/m2p/server
+Environment="NODE_ENV=production"
+EnvironmentFile=/home/m2p/m2p/.env
+ExecStart=/usr/bin/node dist/worker.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=m2p-worker
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/m2p/m2p
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=512M
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

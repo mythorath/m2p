@@ -19,5 +19,9 @@ eventlet==0.33.3
 # Utilities
 python-dotenv==1.0.0
 
+# Web scraping and async support
+aiohttp==3.9.1
+beautifulsoup4==4.12.2
+
 # Optional: PostgreSQL support (uncomment if using PostgreSQL)
 # psycopg2-binary==2.9.9

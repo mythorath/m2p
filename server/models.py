@@ -42,11 +42,12 @@ class Player(db.Model):
     total_ap = db.Column(db.Integer, default=0, nullable=False)
     spent_ap = db.Column(db.Integer, default=0, nullable=False)
     total_mined_advc = db.Column(db.Numeric(20, 8), default=0, nullable=False)
+    total_advc = db.Column(db.Numeric(20, 8), default=0, nullable=False)  # Alias for compatibility
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    mining_events = db.relationship('MiningEvent', back_populates='player', lazy='dynamic')
+    mining_events = db.relationship('MiningEvent', foreign_keys='MiningEvent.wallet_address', back_populates='player', lazy='dynamic')
     achievements = db.relationship('PlayerAchievement', back_populates='player', lazy='dynamic')
     purchases = db.relationship('Purchase', back_populates='player', lazy='dynamic')
 
@@ -97,11 +98,12 @@ class MiningEvent(db.Model):
 
     Attributes:
         id: Auto-incrementing primary key
-        wallet_address: Foreign key to Player
+        player_wallet: Foreign key to Player
         amount_advc: Amount of ADVC mined
-        ap_awarded: Action Points awarded for this event
-        pool: Mining pool name/identifier
-        timestamp: When the mining event occurred
+        ap_earned: Action Points awarded for this event
+        pool_name: Mining pool name/identifier
+        event_time: When the mining event occurred
+        tx_hash: Transaction hash (if available)
     """
     __tablename__ = 'mining_events'
 
@@ -111,9 +113,27 @@ class MiningEvent(db.Model):
     ap_awarded = db.Column(db.Integer, nullable=False)
     pool = db.Column(db.String(100), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    tx_hash = db.Column(db.String(128), nullable=True)
 
     # Relationships
     player = db.relationship('Player', back_populates='mining_events')
+
+    # Property aliases for compatibility
+    @property
+    def player_wallet(self):
+        return self.wallet_address
+
+    @property
+    def ap_earned(self):
+        return self.ap_awarded
+
+    @property
+    def pool_name(self):
+        return self.pool
+
+    @property
+    def event_time(self):
+        return self.timestamp
 
     def __repr__(self):
         return f'<MiningEvent {self.wallet_address} {self.amount_advc} ADVC>'
@@ -137,8 +157,11 @@ class Achievement(db.Model):
         id: Auto-incrementing primary key
         name: Achievement name
         description: Achievement description
+        tier: Achievement tier (Bronze, Silver, Gold, Platinum, Diamond)
         ap_reward: AP rewarded when unlocked
         icon: Icon identifier/URL
+        criteria: JSON string of unlock criteria
+        category: Achievement category (mining, progression, etc.)
         created_at: When achievement was created
     """
     __tablename__ = 'achievements'
@@ -146,8 +169,11 @@ class Achievement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=False)
+    tier = db.Column(db.String(20), nullable=False, default='Bronze')
     ap_reward = db.Column(db.Integer, default=0, nullable=False)
     icon = db.Column(db.String(200), nullable=True)
+    criteria = db.Column(db.Text, nullable=True)  # JSON string
+    category = db.Column(db.String(50), nullable=True, default='general')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

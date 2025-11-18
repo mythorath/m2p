@@ -1,280 +1,437 @@
-# M2P - Mining to Play
+# Mine to Play (M2P) - Complete Integrated Platform
 
-A Flask-based API server with WebSocket support for a blockchain gaming reward system built on Advancecoin (ADVC).
+> A blockchain-integrated gaming platform combining pool mining mechanics, achievement systems, and real-time gameplay
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![React](https://img.shields.io/badge/react-18.0+-blue.svg)](https://reactjs.org/)
+[![Flask](https://img.shields.io/badge/flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
 
 ## Overview
 
-M2P (Mining to Play) is a gamification layer for cryptocurrency mining that rewards miners with Action Points (AP) which can be spent on in-game items, upgrades, and features. The system tracks mining events, manages player achievements, and provides real-time notifications via WebSocket.
+Mine to Play (M2P) is a revolutionary gaming platform that combines traditional gaming mechanics with blockchain technology. Players can join mining pools, complete achievements, earn rewards, and interact with the game through a secure, wallet-based authentication system.
+
+This repository contains the **complete integrated system** with all features from multiple development phases:
+- ✅ Database foundation and models
+- ✅ Flask API server with WebSocket support
+- ✅ Pool monitoring and management
+- ✅ Wallet verification system
+- ✅ Achievement tracking and unlocking
+- ✅ Leaderboard system with real-time updates
+- ✅ React game client with animations
+- ✅ Game visualizations and effects
+- ✅ Comprehensive test suite
+- ✅ Complete documentation and deployment guides
+
+## Quick Start
+
+### Prerequisites
+
+- **Python** >= 3.9
+- **Node.js** >= 16.0
+- **npm** >= 8.0
+- **PostgreSQL** >= 13 (or SQLite for development)
+- **Redis** >= 6.0 (optional, for production caching)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/m2p.git
+   cd m2p
+   ```
+
+2. **Setup Backend**
+   ```bash
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+   # Install dependencies
+   pip install -r requirements.txt
+
+   # Setup environment variables
+   cp server/.env.example server/.env
+   # Edit server/.env with your configuration
+
+   # Initialize database
+   cd server
+   python
+   >>> from app import app, db
+   >>> with app.app_context():
+   >>>     db.create_all()
+   >>> exit()
+   ```
+
+3. **Setup Frontend**
+   ```bash
+   cd client
+   npm install
+
+   # Setup environment
+   cp .env.example .env
+   # Edit .env with your API URL
+   ```
+
+4. **Run the Application**
+
+   **Backend** (Terminal 1):
+   ```bash
+   cd server
+   chmod +x run.sh
+   ./run.sh
+   # Or manually:
+   # python app.py
+   ```
+
+   **Frontend** (Terminal 2):
+   ```bash
+   cd client
+   npm start
+   ```
+
+5. **Access the Application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000
+   - API Docs: http://localhost:5000/api (when enabled)
 
 ## Features
 
-- **Player Registration & Verification**: Wallet-based registration with verification challenge
-- **Mining Reward Tracking**: Automatic tracking of mining events and AP rewards
-- **Achievement System**: Unlock achievements and earn bonus AP
-- **Leaderboard**: Global and time-based rankings (all-time, weekly, daily)
-- **AP Economy**: Spend AP on items and upgrades
-- **Real-time Notifications**: WebSocket support for instant updates
-- **RESTful API**: Comprehensive API for all operations
-- **Rate Limiting**: Built-in protection against abuse
-- **Database Support**: SQLite (dev) and PostgreSQL (production)
+### Core Game Features
+- **Wallet Integration**: Secure player authentication using blockchain wallet signatures
+- **Pool System**: Join and manage mining pools with dynamic reward distribution
+- **Achievement System**: Unlock achievements and earn Achievement Points (AP)
+- **Real-time Updates**: WebSocket-based live game state synchronization
+- **Player Verification**: Multi-tier verification system for enhanced security
+- **Leaderboards**: Competitive rankings based on AP, hashrate, and rewards
+- **Reward System**: Automated reward distribution based on pool contributions
+
+### Frontend Features
+- **Interactive Game View**: Animated mining scenes with sprite-based characters
+- **Real-time Notifications**: Instant reward and achievement popups
+- **Responsive Design**: Mobile-friendly dark theme with glassmorphism effects
+- **Audio Controls**: Background music and sound effects
+- **Loading States**: Smooth loading animations and state management
+- **Statistics Dashboard**: Comprehensive player and pool statistics
+- **Achievement Gallery**: Visual achievement tracking with progress bars
+
+### Backend Features
+- **RESTful API**: Complete REST API for all game operations
+- **WebSocket Server**: Real-time bidirectional communication
+- **Database Models**: Comprehensive SQLAlchemy models for all entities
+- **Rate Limiting**: Protection against abuse and spam
+- **Error Handling**: Graceful error handling with detailed logging
+- **Security**: Input validation, SQL injection prevention, XSS protection
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                          │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │   React    │  │  WebSocket   │  │  Animations     │    │
+│  │   App      │  │  Client      │  │  & Effects      │    │
+│  └────────────┘  └──────────────┘  └─────────────────┘    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                    ┌───────▼────────┐
+                    │   API Gateway  │
+                    │   (Optional)   │
+                    └───────┬────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                      Application Layer                       │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │   Flask    │  │   Socket.IO  │  │   Rate Limiter  │    │
+│  │   REST API │  │   WebSocket  │  │                 │    │
+│  └────────────┘  └──────────────┘  └─────────────────┘    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                      Business Layer                          │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │   Pool     │  │  Achievement │  │   Verification  │    │
+│  │  Manager   │  │  System      │  │   Service       │    │
+│  └────────────┘  └──────────────┘  └─────────────────┘    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────────┐
+│                       Data Layer                             │
+│  ┌────────────┐  ┌──────────────┐  ┌─────────────────┐    │
+│  │ PostgreSQL │  │    Redis     │  │   File Storage  │    │
+│  │  Database  │  │   (Cache)    │  │                 │    │
+│  └────────────┘  └──────────────┘  └─────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Project Structure
 
 ```
 m2p/
-├── server/
-│   ├── app.py              # Main Flask application
-│   ├── models.py           # Database models
-│   ├── run.sh              # Startup script
-│   └── .env.example        # Environment configuration template
-├── requirements.txt        # Python dependencies
-├── API_DOCUMENTATION.md    # Complete API documentation
-├── .gitignore
-└── README.md
+├── client/                 # React frontend application
+│   ├── src/
+│   │   ├── components/    # React components (GameView, Leaderboard, etc.)
+│   │   ├── hooks/         # Custom hooks (usePlayer, useWebSocket)
+│   │   ├── services/      # API and WebSocket services
+│   │   ├── context/       # React context for state management
+│   │   └── animations/    # Animation configurations
+│   ├── public/            # Static assets and sounds
+│   └── package.json
+│
+├── server/                # Flask backend application
+│   ├── app.py             # Main Flask application with routes
+│   ├── models.py          # SQLAlchemy database models
+│   ├── tests/             # Backend test suite
+│   └── run.sh             # Server startup script
+│
+├── docs/                  # Comprehensive documentation
+│   ├── ARCHITECTURE.md    # System architecture guide
+│   ├── API.md             # Complete API reference
+│   ├── DEPLOYMENT.md      # Deployment instructions
+│   ├── DEVELOPMENT.md     # Development setup guide
+│   ├── POOL_INTEGRATION.md    # Pool integration guide
+│   ├── ACHIEVEMENT_GUIDE.md   # Achievement creation guide
+│   ├── SECURITY.md        # Security best practices
+│   ├── TROUBLESHOOTING.md # Common issues and solutions
+│   └── PERFORMANCE.md     # Performance optimization
+│
+├── deploy/                # Deployment configuration
+│   ├── docker/           # Docker configurations
+│   ├── nginx/            # Nginx configuration
+│   ├── systemd/          # Systemd service files
+│   ├── monitoring/       # Prometheus and Grafana configs
+│   └── ssl/              # SSL setup scripts
+│
+├── scripts/               # Utility scripts
+│   ├── admin.py          # Admin CLI tool
+│   ├── backup-db.sh      # Database backup script
+│   ├── restore-db.sh     # Database restore script
+│   └── health-check.sh   # Health monitoring script
+│
+├── .env.example          # Environment variables template
+├── requirements.txt      # Python dependencies
+├── requirements-test.txt # Testing dependencies
+├── pytest.ini            # Pytest configuration
+├── Makefile              # Common tasks automation
+├── TESTING.md            # Testing documentation
+└── CHANGELOG.md          # Version history
 ```
 
-## Quick Start
+## API Overview
 
-### 1. Installation
+### REST Endpoints
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd m2p
+#### Authentication
+- `POST /api/register` - Register new player with wallet
+- `POST /api/login` - Login with wallet and password
+- `POST /api/verify` - Verify wallet ownership
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+#### Player Management
+- `GET /api/players/<wallet>` - Get player profile
+- `PUT /api/players/<wallet>` - Update player profile
+- `GET /api/players/<wallet>/stats` - Get player statistics
 
-# Install dependencies
-pip install -r requirements.txt
-```
+#### Pools
+- `GET /api/pools` - List all pools
+- `GET /api/pools/<id>` - Get pool details
+- `POST /api/pools/<id>/join` - Join a pool
+- `POST /api/pools/<id>/leave` - Leave a pool
 
-### 2. Configuration
-
-```bash
-# Copy environment template
-cp server/.env.example server/.env
-
-# Edit .env with your settings
-nano server/.env
-```
-
-Required configuration:
-- `SECRET_KEY`: Random secret key for Flask
-- `DATABASE_URL`: Database connection string
-- `DONATION_ADDRESS`: Your Advancecoin donation address
-
-### 3. Initialize Database
-
-```bash
-cd server
-python -c "from app import app, db; app.app_context().push(); db.create_all()"
-```
-
-### 4. Run Server
-
-**Development Mode:**
-```bash
-cd server
-python app.py
-```
-
-**Production Mode:**
-```bash
-cd server
-./run.sh
-```
-
-The server will start on `http://localhost:5000`
-
-## API Endpoints
-
-### Player Management
-- `POST /api/register` - Register new player
-- `GET /api/player/:wallet` - Get player info
-- `POST /api/player/:wallet/verify` - Verify wallet ownership
-- `POST /api/player/:wallet/spend-ap` - Spend Action Points
-
-### Leaderboard
-- `GET /api/leaderboard` - Get top players
-- `GET /api/leaderboard/:wallet/rank` - Get player rank
-
-### Achievements
+#### Achievements
 - `GET /api/achievements` - List all achievements
-- `GET /api/player/:wallet/achievements` - Get player's achievements
+- `GET /api/players/<wallet>/achievements` - Get player achievements
+- `GET /api/achievements/<id>` - Get achievement details
 
-### Statistics
-- `GET /api/stats` - Global statistics
+#### Leaderboard
+- `GET /api/leaderboard` - Get global leaderboard
+- `GET /api/leaderboard/weekly` - Get weekly leaderboard
+- `GET /api/leaderboard/daily` - Get daily leaderboard
 
-### Health
-- `GET /health` - Server health check
+### WebSocket Events
 
-See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for complete API reference.
+#### Client → Server
+- `join_pool` - Join a pool room
+- `submit_share` - Submit mining work
+- `request_stats` - Request statistics update
 
-## WebSocket Events
-
-### Client → Server
-- `connect` - Initial connection
-- `join` - Join wallet-specific room
-- `leave` - Leave room
-- `ping` - Heartbeat
-
-### Server → Client
+#### Server → Client
 - `mining_reward` - New mining reward received
-- `verification_complete` - Wallet verification successful
-- `achievement_unlocked` - Achievement earned
-- `rank_changed` - Leaderboard rank updated
+- `achievement_unlocked` - Achievement unlocked
+- `pool_update` - Pool state changed
+- `leaderboard_update` - Leaderboard changed
 
-## Database Schema
-
-### Tables
-- **players**: Player accounts and stats
-- **mining_events**: Mining reward history
-- **achievements**: Available achievements
-- **player_achievements**: Unlocked achievements
-- **purchases**: AP spending history
+See [API.md](docs/API.md) for complete API documentation.
 
 ## Development
 
 ### Running Tests
 
 ```bash
-# Install dev dependencies
-pip install pytest pytest-cov
-
-# Run tests
+# Backend tests
+cd server
 pytest
+
+# With coverage
+pytest --cov=. --cov-report=html
+
+# Frontend tests
+cd client
+npm test
+
+# E2E tests
+npm run test:e2e
 ```
 
-### Code Style
+### Code Quality
 
 ```bash
-# Install formatting tools
-pip install black flake8
+# Python linting
+cd server
+pylint app.py models.py
+
+# JavaScript linting
+cd client
+npm run lint
 
 # Format code
-black server/
-
-# Check style
-flake8 server/
+npm run format
 ```
 
-## Production Deployment
+## Deployment
 
-### Using Gunicorn + Nginx
+### Docker Deployment (Recommended)
 
-1. Install Gunicorn:
 ```bash
-pip install gunicorn eventlet
+cd deploy/docker
+docker-compose up -d
 ```
 
-2. Run with Gunicorn:
+### Manual Deployment
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed production deployment instructions including:
+- Database setup
+- Nginx configuration
+- SSL certificates
+- Systemd services
+- Monitoring setup
+- Backup strategies
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
+- **[API Reference](docs/API.md)** - Complete API documentation
+- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment guide
+- **[Development](docs/DEVELOPMENT.md)** - Development environment setup
+- **[Pool Integration](docs/POOL_INTEGRATION.md)** - Adding custom pool types
+- **[Achievement Guide](docs/ACHIEVEMENT_GUIDE.md)** - Creating achievements
+- **[Security](docs/SECURITY.md)** - Security best practices
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
+- **[Performance](docs/PERFORMANCE.md)** - Optimization strategies
+- **[Testing](TESTING.md)** - Test suite documentation
+
+## Admin Tools
+
+### CLI Admin Tool
+
 ```bash
-gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:5000 server.app:app
+# Verify a player
+python scripts/admin.py verify-player <wallet> --level 2
+
+# Award achievement points
+python scripts/admin.py award-ap <wallet> 100
+
+# Ban/unban player
+python scripts/admin.py ban-player <wallet> --reason "Cheating"
+python scripts/admin.py unban-player <wallet>
+
+# Show system stats
+python scripts/admin.py stats
+
+# List top players
+python scripts/admin.py list-players --limit 50 --sort-by ap
 ```
 
-3. Configure Nginx as reverse proxy:
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+### Database Backup
 
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+```bash
+# Backup database
+./scripts/backup-db.sh
+
+# Restore from backup
+./scripts/restore-db.sh /path/to/backup.sql
 ```
 
-### Using Docker
+## Monitoring
 
-```dockerfile
-FROM python:3.11-slim
+- **Health Check**: http://localhost:5000/health
+- **Prometheus Metrics**: http://localhost:9090
+- **Grafana Dashboards**: http://localhost:3001
 
-WORKDIR /app
+## Security
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+- Wallet-based authentication with signature verification
+- Input validation and sanitization
+- SQL injection prevention (SQLAlchemy ORM)
+- XSS protection
+- Rate limiting
+- CSRF protection
+- Secure password hashing
+- Environment variable management
 
-COPY server/ ./server/
+See [SECURITY.md](docs/SECURITY.md) for security best practices.
 
-WORKDIR /app/server
+## Performance
 
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:5000", "app:app"]
-```
+Target performance metrics:
+- API Response Time: < 200ms (p95)
+- WebSocket Latency: < 100ms
+- Throughput: > 1000 req/s
+- Concurrent Users: 10,000+
 
-## Security Considerations
-
-- Change `SECRET_KEY` in production
-- Use HTTPS in production
-- Configure proper CORS origins
-- Use PostgreSQL instead of SQLite
-- Implement proper transaction verification
-- Add authentication for sensitive endpoints
-- Monitor rate limits
-- Regular security audits
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Flask secret key | `dev-secret-key...` |
-| `DATABASE_URL` | Database connection | `sqlite:///m2p.db` |
-| `DONATION_ADDRESS` | ADVC donation address | Required |
-| `FLASK_HOST` | Server host | `0.0.0.0` |
-| `FLASK_PORT` | Server port | `5000` |
-| `FLASK_DEBUG` | Debug mode | `False` |
-
-## Troubleshooting
-
-### Database Connection Errors
-- Verify `DATABASE_URL` in `.env`
-- Ensure database exists and is accessible
-- Check user permissions
-
-### WebSocket Connection Failed
-- Verify CORS settings in `app.py`
-- Check firewall rules
-- Ensure client uses correct protocol (ws:// or wss://)
-
-### Rate Limit Exceeded
-- Adjust limits in `app.py`
-- Consider using Redis for distributed rate limiting
+See [PERFORMANCE.md](docs/PERFORMANCE.md) for optimization strategies.
 
 ## Contributing
 
+We welcome contributions! Please:
+
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Write/update tests
+5. Submit a pull request
+
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development guidelines.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and migration guides.
 
 ## Support
 
-For issues, questions, or contributions, please open an issue on GitHub.
-
-## Roadmap
-
-- [ ] Implement blockchain transaction verification
-- [ ] Add OAuth2 authentication
-- [ ] Create admin dashboard
-- [ ] Add more achievement types
-- [ ] Implement quest system
-- [ ] Add item marketplace
-- [ ] Mobile app support
-- [ ] Multi-language support
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/m2p/issues)
+- **Email**: support@m2p.example.com
 
 ## Acknowledgments
 
-- Built with Flask and Flask-SocketIO
-- Designed for Advancecoin (ADVC) blockchain
-- Inspired by play-to-earn gaming models
+This project integrates work from multiple development phases:
+- Phase 1: Database foundation and models
+- Phase 2: Flask API and WebSocket server
+- Phase 3: Pool monitoring service
+- Phase 4: Wallet verification system
+- Phase 5: Achievement tracking system
+- Phase 6: Leaderboard implementation
+- Phase 7: React game client
+- Phase 8: Game visualizations and animations
+- Phase 9: Comprehensive test suite
+- Phase 10: Documentation and deployment infrastructure
+
+---
+
+**Built with ❤️ for the blockchain gaming community**

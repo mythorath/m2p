@@ -175,11 +175,11 @@ const Leaderboard = () => {
                 <tbody>
                   {getPaginatedData().map((player, index) => {
                     const rank = (currentPage - 1) * itemsPerPage + index + 1;
-                    const isCurrentPlayer = player.wallet === wallet;
+                    const isCurrentPlayer = player.wallet_address === wallet;
 
                     return (
                       <motion.tr
-                        key={player.wallet}
+                        key={player.wallet_address}
                         className={isCurrentPlayer ? 'current-player' : ''}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

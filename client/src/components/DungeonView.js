@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { GameContext } from '../context/GameContext';
+import React, { useState, useEffect } from 'react';
+import { useGame } from '../context/GameContext';
 import api from '../services/api';
 import './DungeonView.css';
 
 const DungeonView = () => {
-  const { wallet, player, socketConnected } = useContext(GameContext);
+  const { wallet, player, socketConnected } = useGame();
   const [dungeons, setDungeons] = useState([]);
   const [currentRun, setCurrentRun] = useState(null);
   const [character, setCharacter] = useState(null);

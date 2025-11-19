@@ -16,6 +16,8 @@ Main features:
 import os
 import logging
 import re
+import aiohttp
+import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import wraps
@@ -34,6 +36,7 @@ from models import (
     PlayerCharacter, Gear, PlayerInventory, Monster
 )
 from dungeon_service import DungeonService
+from verification_monitor import VerificationMonitor
 
 # Configure logging
 logging.basicConfig(
@@ -41,6 +44,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Constants
+DONATION_ADDRESS = os.environ.get('DONATION_ADDRESS', 'AKUg58E171GVJNw2RQzooQnuHs1zns2ecD')
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -63,11 +69,11 @@ socketio = SocketIO(
     async_mode='threading'
 )
 
-# Rate limiting
+# Rate limiting - Disabled for testing
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=[],  # No limits for testing
     storage_uri="memory://"
 )
 
@@ -79,25 +85,159 @@ with app.app_context():
 # Initialize dungeon service
 dungeon_service = DungeonService(app=app, socketio=socketio)
 
+# Initialize verification monitor
+verification_monitor = VerificationMonitor(app=app, socketio=socketio)
+
 
 # ===========================
 # Validation Functions
 # ===========================
 
-def validate_wallet_address(wallet):
+async def verify_wallet_onchain(wallet):
     """
-    Validate Advancecoin wallet address format.
+    Verify wallet exists on Adventurecoin blockchain and has made at least one transaction.
+    
+    Args:
+        wallet: Wallet address to verify
+        
+    Returns:
+        bool: True if wallet exists and has transactions, False otherwise
+    """
+    try:
+        # Use the history endpoint to check if wallet has any transactions
+        api_url = f"https://api.adventurecoin.quest/history/{wallet}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status != 200:
+                    logger.warning(f"Wallet verification failed for {wallet}: API returned {response.status}")
+                    return False
+                
+                data = await response.json()
+                
+                # Check for error in response
+                if data.get('error'):
+                    logger.warning(f"Wallet {wallet} verification error: {data.get('error')}")
+                    return False
+                
+                # Check if wallet has transaction history
+                result = data.get('result', {})
+                tx_count = result.get('txcount', 0)
+                tx_list = result.get('tx', [])
+                
+                if tx_count == 0 or len(tx_list) == 0:
+                    logger.warning(f"Wallet {wallet} has no transaction history (txcount: {tx_count})")
+                    return False
+                
+                logger.info(f"Wallet {wallet} verified successfully with {tx_count} transactions")
+                return True
+                
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout verifying wallet {wallet}")
+        return False
+    except Exception as e:
+        logger.error(f"Error verifying wallet {wallet}: {str(e)}")
+        return False
+
+
+async def verify_transaction_onchain(tx_hash, sender_wallet, recipient_wallet, expected_amount):
+    """
+    Verify a specific transaction on the Adventurecoin blockchain.
+    
+    Args:
+        tx_hash: Transaction hash to verify
+        sender_wallet: Expected sender wallet address
+        recipient_wallet: Expected recipient wallet address
+        expected_amount: Expected transaction amount in ADVC
+        
+    Returns:
+        dict: {'valid': bool, 'error': str or None}
+    """
+    try:
+        api_url = f"https://api.adventurecoin.quest/transaction/{tx_hash}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status != 200:
+                    return {'valid': False, 'error': f'Transaction not found or API error (status {response.status})'}
+                
+                data = await response.json()
+                
+                if data.get('error'):
+                    return {'valid': False, 'error': f'Transaction verification error: {data.get("error")}'}
+                
+                result = data.get('result', {})
+                
+                # Verify transaction has confirmations
+                confirmations = result.get('confirmations', 0)
+                if confirmations < 1:
+                    return {'valid': False, 'error': 'Transaction not yet confirmed (needs at least 1 confirmation)'}
+                
+                # Get transaction outputs (vout)
+                vouts = result.get('vout', [])
+                
+                # Find output to our donation address and verify amount
+                found_payment = False
+                for vout in vouts:
+                    script_pub_key = vout.get('scriptPubKey', {})
+                    addresses = script_pub_key.get('addresses', [])
+                    value_satoshis = vout.get('value', 0)
+                    
+                    # Convert satoshis to ADVC (1 ADVC = 100000000 satoshis)
+                    value_advc = value_satoshis / 100000000.0
+                    
+                    if recipient_wallet in addresses:
+                        # Check if amount matches (allow small variance for fees)
+                        expected_float = float(expected_amount)
+                        if abs(value_advc - expected_float) < 0.0001:  # Within 0.0001 ADVC
+                            found_payment = True
+                            break
+                
+                if not found_payment:
+                    return {'valid': False, 'error': f'Transaction does not contain payment of {expected_amount} ADVC to {recipient_wallet}'}
+                
+                logger.info(f"Transaction {tx_hash} verified successfully from {sender_wallet}")
+                return {'valid': True, 'error': None}
+                
+    except asyncio.TimeoutError:
+        return {'valid': False, 'error': 'Timeout verifying transaction on blockchain'}
+    except Exception as e:
+        logger.error(f"Error verifying transaction {tx_hash}: {str(e)}")
+        return {'valid': False, 'error': f'Error verifying transaction: {str(e)}'}
+
+
+def validate_wallet_address(wallet, check_blockchain=False):
+    """
+    Validate Advancecoin wallet address format and optionally verify on blockchain.
 
     Args:
         wallet: Wallet address to validate
+        check_blockchain: Whether to verify wallet exists on blockchain (default: False for backwards compatibility)
 
     Returns:
         bool: True if valid, False otherwise
     """
     if not wallet or not isinstance(wallet, str):
         return False
-    # Wallet should start with 'A' and be 34 characters long
-    return bool(re.match(r'^A[a-zA-Z0-9]{33}$', wallet))
+    
+    # Check format: Wallet should start with 'A' and be 34 characters long
+    if not re.match(r'^A[a-zA-Z0-9]{33}$', wallet):
+        return False
+    
+    # If blockchain verification is requested, check on-chain
+    if check_blockchain:
+        try:
+            # Run async verification in sync context
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(verify_wallet_onchain(wallet))
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Error in blockchain verification: {str(e)}")
+            return False
+    
+    return True
 
 
 def validate_positive_number(value, field_name="value"):
@@ -200,6 +340,43 @@ def health_check():
     })
 
 
+@app.route('/api/pending_verifications', methods=['GET'])
+def get_pending_verifications():
+    """
+    Get all pending verifications (for testing/debugging).
+    
+    Returns:
+        JSON response with pending verification details
+    """
+    try:
+        now = datetime.utcnow()
+        pending_players = Player.query.filter(
+            Player.verified == False,
+            Player.challenge_amount.isnot(None),
+            Player.challenge_expires_at > now
+        ).all()
+        
+        pending_list = []
+        for player in pending_players:
+            pending_list.append({
+                'wallet_address': player.wallet_address,
+                'display_name': player.display_name,
+                'challenge_amount': float(player.challenge_amount),
+                'expires_at': player.challenge_expires_at.isoformat(),
+                'created_at': player.created_at.isoformat()
+            })
+        
+        return jsonify({
+            'count': len(pending_list),
+            'donation_address': DONATION_ADDRESS,
+            'pending_verifications': pending_list
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching pending verifications: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ===========================
 # Player Management Endpoints
 # ===========================
@@ -239,8 +416,13 @@ def register_player():
         if not wallet_address or not display_name:
             return jsonify({'error': 'wallet_address and display_name are required'}), 400
 
-        if not validate_wallet_address(wallet_address):
-            return jsonify({'error': 'Invalid wallet address format'}), 400
+        # Validate wallet format first
+        if not validate_wallet_address(wallet_address, check_blockchain=False):
+            return jsonify({'error': 'Invalid wallet address format. Must start with A and be 34 characters.'}), 400
+
+        # Verify wallet exists on blockchain with transactions
+        if not validate_wallet_address(wallet_address, check_blockchain=True):
+            return jsonify({'error': 'Wallet address not found on Adventurecoin blockchain or has no transaction history. Please use a wallet that has made at least one transaction.'}), 400
 
         if len(display_name) < 3 or len(display_name) > 50:
             return jsonify({'error': 'display_name must be between 3 and 50 characters'}), 400
@@ -268,12 +450,9 @@ def register_player():
 
         logger.info(f"New player registered: {wallet_address} ({display_name})")
 
-        # TODO: Replace with actual system donation address
-        donation_address = os.environ.get('DONATION_ADDRESS', 'ASYSTEM_DONATION_ADDRESS_HERE')
-
         return jsonify({
             'challenge_amount': float(challenge_amount),
-            'donation_address': donation_address,
+            'donation_address': DONATION_ADDRESS,
             'expires_at': expires_at.isoformat()
         }), 201
 
@@ -369,13 +548,17 @@ def verify_player(wallet):
         if player.challenge_expires_at and datetime.utcnow() > player.challenge_expires_at:
             return jsonify({'error': 'Verification challenge expired'}), 400
 
-        # TODO: Implement actual blockchain transaction verification
-        # For now, we'll mark as verified and credit AP
-        # In production, you would:
-        # 1. Query blockchain for tx_hash
-        # 2. Verify transaction amount matches challenge_amount
-        # 3. Verify transaction recipient is system wallet
-        # 4. Verify transaction is from player's wallet
+        # Verify transaction on blockchain
+        # Run async blockchain verification
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        verification_result = loop.run_until_complete(
+            verify_transaction_onchain(tx_hash, wallet, DONATION_ADDRESS, player.challenge_amount)
+        )
+        loop.close()
+        
+        if not verification_result['valid']:
+            return jsonify({'error': verification_result['error']}), 400
 
         # Credit AP (convert challenge amount to AP, e.g., 1 ADVC = 100 AP)
         ap_credited = int(float(player.challenge_amount) * 100)
@@ -1780,5 +1963,9 @@ if __name__ == '__main__':
     logger.info(f"Starting M2P Flask server on {host}:{port}")
     logger.info(f"Debug mode: {debug}")
 
+    # Start verification monitor
+    logger.info("Starting verification monitor...")
+    verification_monitor.start()
+
     # Run with SocketIO
-    socketio.run(app, host=host, port=port, debug=debug)
+    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)

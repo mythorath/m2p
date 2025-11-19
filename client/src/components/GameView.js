@@ -180,7 +180,7 @@ const GameView = () => {
             {!player.verified && (
               <div className="verification-reminder">
                 <p>You need to verify your wallet to start earning rewards.</p>
-                <p className="wallet-display">Wallet: {player.wallet}</p>
+                <p className="wallet-display">Wallet: {player.wallet_address}</p>
               </div>
             )}
           </div>
@@ -249,7 +249,7 @@ const GameView = () => {
               <div className="quick-stat">
                 <span className="quick-stat-label">Wallet:</span>
                 <span className="quick-stat-value wallet-short">
-                  {player.wallet.slice(0, 8)}...{player.wallet.slice(-6)}
+                  {player.wallet_address.slice(0, 8)}...{player.wallet_address.slice(-6)}
                 </span>
               </div>
             </div>

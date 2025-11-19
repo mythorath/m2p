@@ -1,0 +1,105 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    M2P (Mine to Play) - Command Cheat Sheet              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ SYSTEM MANAGEMENT                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+  cd /home/mytho/m2p
+
+  ./start.sh          Start all services (backend + frontend)
+  ./stop.sh           Stop all services
+  ./restart.sh        Restart all services
+  ./status.sh         Check system status
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ LOGS & MONITORING                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+  tail -f /tmp/m2p_backend.log               Live backend logs
+  tail -f /tmp/m2p_frontend.log              Live frontend logs
+  tail -50 /tmp/m2p_backend.log | grep ERROR Last 50 errors
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ QUICK TESTS                                                              │
+└──────────────────────────────────────────────────────────────────────────┘
+  WALLET="AcDmzPS41vJR8UG8m43ruSLZkeVCALudcG"  # Your wallet
+  
+  # Player info
+  curl -s "http://localhost:5000/api/player/$WALLET" | python3 -m json.tool
+  
+  # Character stats
+  curl -s "http://localhost:5000/api/character?wallet=$WALLET" | python3 -m json.tool
+  
+  # Active dungeon
+  curl -s "http://localhost:5000/api/dungeon/current?wallet=$WALLET" | python3 -m json.tool
+  
+  # Pending verifications
+  curl -s http://localhost:5000/api/pending_verifications | python3 -m json.tool
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ DATABASE                                                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+  Location: /home/mytho/m2p/server/instance/m2p.db
+  
+  # View stats
+  cd /home/mytho/m2p/server && python3 << 'EOF'
+  import sqlite3
+  conn = sqlite3.connect('instance/m2p.db')
+  cursor = conn.cursor()
+  for table in ['players', 'dungeons', 'mining_events', 'dungeon_runs']:
+      cursor.execute(f"SELECT COUNT(*) FROM {table}")
+      print(f"{table}: {cursor.fetchone()[0]}")
+  conn.close()
+  EOF
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ PLAYER MANAGEMENT                                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+  # Give AP (testing)
+  cd /home/mytho/m2p/server && python3 << 'EOF'
+  from app import app, db
+  from models import Player
+  with app.app_context():
+      player = Player.query.filter_by(
+          wallet_address="AcDmzPS41vJR8UG8m43ruSLZkeVCALudcG"
+      ).first()
+      player.total_ap += 1000
+      db.session.commit()
+      print(f"✓ New AP: {player.total_ap}")
+  EOF
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+  # Kill stuck processes
+  lsof -ti:5000 | xargs kill -9  # Backend
+  lsof -ti:3000 | xargs kill -9  # Frontend
+  
+  # Check ports
+  lsof -ti:5000  # Backend port
+  lsof -ti:3000  # Frontend port
+  
+  # Test Python modules
+  cd /home/mytho/m2p && source venv/bin/activate
+  python3 -c "import flask, flask_socketio, sqlalchemy, aiohttp; print('✓ OK')"
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ACCESS POINTS                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+  Frontend:  http://localhost:3000
+  Backend:   http://localhost:5000
+  API Docs:  /home/mytho/m2p/API_DOCUMENTATION.md
+  Full Guide: /home/mytho/m2p/QUICKSTART.md
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ KEY FACTS                                                                │
+└──────────────────────────────────────────────────────────────────────────┘
+  • 1 ADVC = 10 AP (Action Points)
+  • Verification check interval: 60 seconds
+  • Donation address: AKUg58E171GVJNw2RQzooQnuHs1zns2ecD
+  • Mining pool address: ATBxmBJ9974wk3XVZU8my3gcJeYJe7TEkS
+  • Challenge expires: 24 hours
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ Quick Start: cd /home/mytho/m2p && ./start.sh                           ║
+╚══════════════════════════════════════════════════════════════════════════╝

@@ -27,8 +27,8 @@ api.interceptors.response.use(
  */
 export const registerPlayer = async (wallet, displayName) => {
   try {
-    const response = await api.post('/players/register', {
-      wallet,
+    const response = await api.post('/register', {
+      wallet_address: wallet,
       display_name: displayName,
     });
     return {
@@ -50,7 +50,7 @@ export const registerPlayer = async (wallet, displayName) => {
  */
 export const getPlayer = async (wallet) => {
   try {
-    const response = await api.get(`/players/${wallet}`);
+    const response = await api.get(`/player/${wallet}`);
     return {
       success: true,
       data: response,
@@ -71,9 +71,8 @@ export const getPlayer = async (wallet) => {
  */
 export const verifyPlayer = async (wallet, txid) => {
   try {
-    const response = await api.post('/players/verify', {
-      wallet,
-      txid,
+    const response = await api.post(`/player/${wallet}/verify`, {
+      tx_hash: txid,
     });
     return {
       success: true,
@@ -136,7 +135,7 @@ export const getAchievements = async () => {
  */
 export const getPlayerAchievements = async (wallet) => {
   try {
-    const response = await api.get(`/players/${wallet}/achievements`);
+    const response = await api.get(`/player/${wallet}/achievements`);
     return {
       success: true,
       data: response,
@@ -158,8 +157,7 @@ export const getPlayerAchievements = async (wallet) => {
  */
 export const spendAP = async (wallet, amount, itemId) => {
   try {
-    const response = await api.post('/players/spend', {
-      wallet,
+    const response = await api.post(`/player/${wallet}/spend-ap`, {
       amount,
       item_id: itemId,
     });
